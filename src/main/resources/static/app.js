@@ -1,22 +1,44 @@
 var stompClient = null;
 var uid = Math.floor(Math.random() * 10000000000000001);
 
-function connect() {
+
+function connect(sync_connect) {
+	if (stompClient != null) {
+		stompClient.disconnect();
+	}
+
     var socket = new SockJS('/gs-guide-websocket');
     stompClient = Stomp.over(socket);
-    stompClient.connect({}, function (frame) {
-        console.log('Connected: ' + frame);
-        stompClient.subscribe('/topic/chat', function (message) {
-        	msg = JSON.parse(message.body);
-            showMessage(msg.content, msg.user == uid);
-        });
-    });
+    
+    promisedConnect = function() {
+    	return new Promise((ok, err) => {
+    		stompClient.connect({}, function (frame) {
+        		console.log('Connected: ' + frame);
+        		stompClient.subscribe('/topic/chat', function (message) {
+        			msg = JSON.parse(message.body);
+            		showMessage(msg.content, msg.user == uid);
+            	});
+            	console.log('sending someval');
+            	ok('someval');
+        	});
+    	});
+    }
+    
+    if (sync_connect) {
+    	promisedConnect();
+    } else {
+    	return promisedConnect;
+    }    
 }
 
 function sendName() {
-    stompClient.send("/app/postmessage", {}, JSON.stringify(
-    				{'text': $("#send").val(),
-    				 'user': uid}));
+	connect(false)().then((v) => {
+		console.log('received ' + v);
+    	stompClient.send("/app/postmessage", {}, JSON.stringify(
+    				   	{'text': $("#send").val(),
+    				    	'user': uid}));
+    	$("#send").val("");
+    });
 }
 
 function showMessage(message, ownmessage) {
@@ -43,11 +65,10 @@ $(function () {
     $("form").on('submit', function (e) {
         e.preventDefault();
     });
-    connect();
+    connect(true);
     $( "#send" ).keypress(function(e) {
         if(e.which == 13) {
         	sendName();
-        	$("#send").val("");
         }
     });
 });
