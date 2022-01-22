@@ -31,14 +31,12 @@ function connect(sync_connect) {
     }    
 }
 
-function sendName() {
-	connect(false)().then((v) => {
-		console.log('received ' + v);
-    	stompClient.send("/app/postmessage", {}, JSON.stringify(
+async function sendName() {
+	await connect(false)();
+	stompClient.send("/app/postmessage", {}, JSON.stringify(
     				   	{'text': $("#send").val(),
     				    	'user': uid}));
-    	$("#send").val("");
-    });
+    $("#send").val("");
 }
 
 function showMessage(message, ownmessage) {
